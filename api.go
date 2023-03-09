@@ -51,7 +51,7 @@ func (s *APIServer) Run() {
 	router := chi.NewMux()
 
 	fileServer := http.FileServer(http.Dir("."))
-	router.Handle("/uploads/*", fileServer)
+	router.Handle("/clips/temp/*", fileServer)
 
 	router.Handle("/clips/upload", http.FileServer(http.Dir("./static/templates")))
 	router.HandleFunc("/clips", makeHTTPHandleFunc(s.handleGetClips))
@@ -155,7 +155,7 @@ func (s *APIServer) handleCreateClip(w http.ResponseWriter, r *http.Request) err
 	}
 	defer file.Close()
 
-	tempFile, err := os.Create(header.Filename)
+	tempFile, err := os.Create("./clips/temp/" + header.Filename)
 	if err != nil {
 		return fmt.Errorf("error creating temp file: %s", err)
 	}
