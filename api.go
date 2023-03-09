@@ -155,7 +155,7 @@ func (s *APIServer) handleCreateClip(w http.ResponseWriter, r *http.Request) err
 	}
 	defer file.Close()
 
-	tempFile, err := os.Create("./clips/temp/" + header.Filename)
+	tempFile, err := os.Create("clips/temp/" + header.Filename)
 	if err != nil {
 		return fmt.Errorf("error creating temp file: %s", err)
 	}
@@ -180,7 +180,7 @@ func (s *APIServer) handleCreateClip(w http.ResponseWriter, r *http.Request) err
 	}
 
 	// Step 3: POST to Mux.com
-	url := "http://thelostsons.net/clips/temp/" + tempFile.Name()
+	url := "http://thelostsons.net/" + tempFile.Name()
 	client := muxgo.CreateMuxGoClient(s.muxApiAuth.Id, s.muxApiAuth.Token)
 	asset, err := muxgo.CreateAsset(client, url)
 	if err != nil {

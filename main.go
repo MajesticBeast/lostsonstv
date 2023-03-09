@@ -31,6 +31,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	server := NewAPIServer(":8081", store, muxApiAuth)
+	server := NewAPIServer(":80", store, muxApiAuth)
 	server.Run()
 }
