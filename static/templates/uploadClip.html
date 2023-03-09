@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload new video</title>
+</head>
+<body>
+    <form action="/clips/add" method="post" enctype="multipart/form-data">
+        Username: <span><input type="text" name="username" id=""></span>
+        Title: <span><input type="text" name="title" id=""></span>
+        Description: <span><input type="text" name="description" id=""></span>
+        Game: <span><input type="text" name="game" id=""></span>
+        Tags: <span><input type="text" name="tags" id=""></span>
+        Players: <span><input type="text" name="players" id=""></span>
+        Video: <span><input type="file" name="videofile" id=""></span>
+        <button type="submit" name="upload">Upload</button>
+    </form>
+</body>
+</html>
