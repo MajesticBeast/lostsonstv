@@ -35,7 +35,17 @@ func NewPostgresStore(dbConnStr string) (*PostgresStore, error) {
 }
 
 func (s *PostgresStore) Init() error {
-	return s.createClipsTable()
+	err := s.createUsersTable()
+	if err != nil {
+		return err
+	}
+
+	err = s.createClipsTable()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *PostgresStore) createClipsTable() error {
@@ -48,7 +58,20 @@ func (s *PostgresStore) createClipsTable() error {
 		tags varchar(100) NOT NULL,
 		players varchar(255) NOT NULL,
 		date_uploaded date NOT NULL,
+		asset_id varchar(200) UNIQUE NOT NULL,
 		PRIMARY KEY ("playback_id")
+	)`
+
+	_, err := s.db.Exec(context.Background(), query)
+	return err
+}
+
+func (s *PostgresStore) createUsersTable() error {
+	query := `CREATE TABLE IF NOT EXISTS users (
+		user_id serial UNIQUE NOT NULL,
+		username varchar(35) UNIQUE NOT NULL,
+		email varchar(60) UNIQUE NOT NULL,
+		PRIMARY KEY ("user_id")
 	)`
 
 	_, err := s.db.Exec(context.Background(), query)
