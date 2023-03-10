@@ -10,7 +10,6 @@ import (
 	"os"
 
 	"github.com/go-chi/chi/v5"
-	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/majesticbeast/lostsonstv/internal/muxgo"
 )
 
@@ -31,18 +30,6 @@ type apiFunc func(http.ResponseWriter, *http.Request) error
 type ApiError struct {
 	Error string `json:"error"`
 }
-
-// func createJWT(user *User) (string, error) {
-// 	claims := &jwt.MapClaims{
-// 		"expiresAt": 15000,
-// 		"username":  user.Username,
-// 	}
-
-// 	secret := os.Getenv("JWT_SECRET")
-// 	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
-
-// 	return token.SignedString([]byte(secret))
-// }
 
 func (s *APIServer) Run() {
 	router := chi.NewRouter()
@@ -67,32 +54,6 @@ func (s *APIServer) Run() {
 	log.Println("Lost Sons TV server running on port: ", s.listenAddr)
 
 	http.ListenAndServe(s.listenAddr, router)
-}
-
-// func withJWTAuth(handlerFunc http.HandlerFunc) http.HandlerFunc {
-// 	return func(w http.ResponseWriter, r *http.Request) {
-// 		fmt.Println("calling JWT auth middleware")
-
-// 		tokenString := r.Header.Get("x-jwt-token")
-// 		_, err := validateJWT(tokenString)
-// 		if err != nil {
-// 			WriteJSON(w, http.StatusForbidden, ApiError{Error: "invalid token"})
-// 			return
-// 		}
-// 		handlerFunc(w, r)
-// 	}
-// }
-
-func validateJWT(tokenString string) (*jwt.Token, error) {
-	secret := os.Getenv("JWT_SECRET")
-	return jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		// Don't forget to validate the alg is what you expect:
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-		}
-
-		return []byte(secret), nil
-	})
 }
 
 func makeHTTPHandleFunc(f apiFunc) http.HandlerFunc {
