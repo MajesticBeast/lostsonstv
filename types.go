@@ -21,6 +21,7 @@ type CreateClipRequest struct {
 	Game        string `json:"game"`
 	Tags        string `json:"tags"`
 	Players     string `json:"players"`
+	AssetId     string `json:"assetId"`
 }
 
 type Clip struct {
@@ -32,9 +33,10 @@ type Clip struct {
 	Tags         string    `json:"tags"`
 	Players      string    `json:"players"`
 	DateUploaded time.Time `json:"dateUploaded"`
+	AssetId      string    `json:"assetId"`
 }
 
-func NewClip(playbackId, uploadedBy, title, description, game, tags, players string) *Clip {
+func NewClip(playbackId, uploadedBy, title, description, game, tags, players, assetId string) *Clip {
 	return &Clip{
 		PlaybackId:   playbackId,
 		UploadedBy:   uploadedBy,
@@ -44,5 +46,6 @@ func NewClip(playbackId, uploadedBy, title, description, game, tags, players str
 		Tags:         tags,
 		Players:      players,
 		DateUploaded: time.Now(),
+		AssetId:      assetId,
 	}
 }

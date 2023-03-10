@@ -1,6 +1,8 @@
 package muxgo
 
-import muxgo "github.com/muxinc/mux-go"
+import (
+	muxgo "github.com/muxinc/mux-go"
+)
 
 func CreateMuxGoClient(MUX_TOKEN_ID, MUX_TOKEN_SECRET string) *muxgo.APIClient {
 	client := muxgo.NewAPIClient(
@@ -24,4 +26,14 @@ func CreateAsset(client *muxgo.APIClient, url string) (muxgo.AssetResponse, erro
 	})
 
 	return asset, err
+}
+
+func DeleteAsset(client *muxgo.APIClient, assetId string) error {
+	err := client.AssetsApi.DeleteAsset(assetId)
+	if err != nil {
+		return err
+	}
+	_, err = client.AssetsApi.GetAsset(assetId)
+
+	return err
 }

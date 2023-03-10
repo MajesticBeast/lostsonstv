@@ -57,7 +57,7 @@ func (s *PostgresStore) createClipsTable() error {
 
 func (s *PostgresStore) CreateClip(clip *Clip) error {
 
-	query := `INSERT INTO clips VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+	query := `INSERT INTO clips VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
 
 	resp, err := s.db.Exec(context.Background(), query,
 		clip.PlaybackId,
@@ -67,7 +67,8 @@ func (s *PostgresStore) CreateClip(clip *Clip) error {
 		clip.Game,
 		clip.Tags,
 		clip.Players,
-		clip.DateUploaded)
+		clip.DateUploaded,
+		clip.AssetId)
 
 	if err != nil {
 		return err
@@ -93,7 +94,7 @@ func (s *PostgresStore) GetClipByPlaybackId(playbackId string) (*Clip, error) {
 	query := "SELECT * FROM clips WHERE playback_id = $1"
 
 	clip := &Clip{}
-	err := s.db.QueryRow(context.Background(), query, playbackId).Scan(&clip.PlaybackId, &clip.UploadedBy, &clip.Title, &clip.Description, &clip.Game, &clip.Tags, &clip.Players, &clip.DateUploaded)
+	err := s.db.QueryRow(context.Background(), query, playbackId).Scan(&clip.PlaybackId, &clip.UploadedBy, &clip.Title, &clip.Description, &clip.Game, &clip.Tags, &clip.Players, &clip.DateUploaded, &clip.AssetId)
 	if err != nil {
 		return nil, fmt.Errorf("video with id `%s` does not exist.", playbackId)
 	}
@@ -108,7 +109,7 @@ func (s *PostgresStore) GetAllClips() ([]*Clip, error) {
 	rows, _ := s.db.Query(context.Background(), query)
 	for rows.Next() {
 		clip := new(Clip)
-		if err := rows.Scan(&clip.PlaybackId, &clip.UploadedBy, &clip.Title, &clip.Description, &clip.Game, &clip.Tags, &clip.Players, &clip.DateUploaded); err != nil {
+		if err := rows.Scan(&clip.PlaybackId, &clip.UploadedBy, &clip.Title, &clip.Description, &clip.Game, &clip.Tags, &clip.Players, &clip.DateUploaded, &clip.AssetId); err != nil {
 			return nil, err
 		}
 

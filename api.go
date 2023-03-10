@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/go-chi/chi/v5"
+	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/majesticbeast/lostsonstv/internal/muxgo"
 )
 
@@ -31,6 +32,69 @@ type ApiError struct {
 	Error string `json:"error"`
 }
 
+// func createJWT(user *User) (string, error) {
+// 	claims := &jwt.MapClaims{
+// 		"expiresAt": 15000,
+// 		"username":  user.Username,
+// 	}
+
+// 	secret := os.Getenv("JWT_SECRET")
+// 	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
+
+// 	return token.SignedString([]byte(secret))
+// }
+
+func (s *APIServer) Run() {
+	router := chi.NewRouter()
+
+	// Define and create FileServers
+	clipsFs := http.FileServer(http.Dir("."))
+	templatesFs := http.FileServer(http.Dir("./static/templates"))
+	router.Handle("/clips/temp/*", clipsFs)
+	router.Handle("/clips/upload", templatesFs)
+
+	// List all clips
+	router.Get("/clips", makeHTTPHandleFunc(s.handleGetClips))
+
+	// Get and delete single clips
+	router.Get("/clips/{playbackId}", makeHTTPHandleFunc(s.handleGetClip))
+	router.Delete("/clips/{playbackId}", makeHTTPHandleFunc(s.handleDeleteClip))
+
+	// Clip creation
+	router.Get("/clips/upload", makeHTTPHandleFunc(s.handleClipSubmission))
+	router.Post("/clips/upload", makeHTTPHandleFunc(s.handleClipSubmission))
+
+	log.Println("Lost Sons TV server running on port: ", s.listenAddr)
+
+	http.ListenAndServe(s.listenAddr, router)
+}
+
+// func withJWTAuth(handlerFunc http.HandlerFunc) http.HandlerFunc {
+// 	return func(w http.ResponseWriter, r *http.Request) {
+// 		fmt.Println("calling JWT auth middleware")
+
+// 		tokenString := r.Header.Get("x-jwt-token")
+// 		_, err := validateJWT(tokenString)
+// 		if err != nil {
+// 			WriteJSON(w, http.StatusForbidden, ApiError{Error: "invalid token"})
+// 			return
+// 		}
+// 		handlerFunc(w, r)
+// 	}
+// }
+
+func validateJWT(tokenString string) (*jwt.Token, error) {
+	secret := os.Getenv("JWT_SECRET")
+	return jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		// Don't forget to validate the alg is what you expect:
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		}
+
+		return []byte(secret), nil
+	})
+}
+
 func makeHTTPHandleFunc(f apiFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := f(w, r); err != nil {
@@ -47,37 +111,9 @@ func NewAPIServer(listenAddr string, store Storage, muxApiAuth muxApiAuth) *APIS
 	}
 }
 
-func (s *APIServer) Run() {
-	router := chi.NewMux()
-
-	fileServer := http.FileServer(http.Dir("."))
-	router.Handle("/clips/temp/*", fileServer)
-
-	router.Handle("/clips/upload", http.FileServer(http.Dir("./static/templates")))
-	router.HandleFunc("/clips", makeHTTPHandleFunc(s.handleGetClips))
-	router.HandleFunc("/clips/{playbackId}", makeHTTPHandleFunc(s.handleGetClip))
-	router.HandleFunc("/clips/add", makeHTTPHandleFunc(s.handleCreateClip))
-	router.HandleFunc("/clips/upload", makeHTTPHandleFunc(s.handleClipSubmission))
-
-	log.Println("Lost Sons TV server running on port: ", s.listenAddr)
-
-	http.ListenAndServe(s.listenAddr, router)
-}
-
-func (s *APIServer) handleClip(w http.ResponseWriter, r *http.Request) error {
-	// I might use this later... I dunno #lolwut
-	if r.Method == "GET" {
-		return s.handleGetClip(w, r)
-	}
-	if r.Method == "POST" {
-		return s.handleCreateClip(w, r)
-	}
-
-	return fmt.Errorf("method not allowed %s", r.Method)
-}
-
 func (s *APIServer) handleGetClip(w http.ResponseWriter, r *http.Request) error {
 	// Pull single clip from database - view or delete based on HTTP method
+
 	if r.Method == "GET" {
 		playbackId := chi.URLParam(r, "playbackId")
 		clip, err := s.store.GetClipByPlaybackId(playbackId)
@@ -88,16 +124,13 @@ func (s *APIServer) handleGetClip(w http.ResponseWriter, r *http.Request) error 
 		return WriteJSON(w, http.StatusOK, clip)
 	}
 
-	if r.Method == "DELETE" {
-		return s.handleDeleteClip(w, r)
-	}
-
 	return fmt.Errorf("method now allowed: %s", r.Method)
 
 }
 
 func (s *APIServer) handleGetClips(w http.ResponseWriter, r *http.Request) error {
 	// Pull all clips from database
+
 	clips, err := s.store.GetAllClips()
 	if err != nil {
 		return err
@@ -108,8 +141,18 @@ func (s *APIServer) handleGetClips(w http.ResponseWriter, r *http.Request) error
 
 func (s *APIServer) handleDeleteClip(w http.ResponseWriter, r *http.Request) error {
 	// Hard delete of a single clip
+
 	playbackId := chi.URLParam(r, "playbackId")
-	err := s.store.DeleteClip(playbackId)
+
+	client := muxgo.CreateMuxGoClient(s.muxApiAuth.Id, s.muxApiAuth.Token)
+
+	clip, err := s.store.GetClipByPlaybackId(playbackId)
+	if err != nil {
+		return err
+	}
+
+	muxgo.DeleteAsset(client, clip.AssetId)
+	err = s.store.DeleteClip(playbackId)
 	if err != nil {
 		return err
 	}
@@ -118,9 +161,11 @@ func (s *APIServer) handleDeleteClip(w http.ResponseWriter, r *http.Request) err
 }
 
 func (s *APIServer) handleClipSubmission(w http.ResponseWriter, r *http.Request) error {
-	// Serve the HTML upload form - only GET methods
-	if r.Method != "GET" {
-		return fmt.Errorf("method not allowed: %d", http.StatusMethodNotAllowed)
+	// Serve the HTML upload form or redirect if form is submitted
+
+	// See if user already submitted form
+	if r.Method == http.MethodPost {
+		return s.handleCreateClip(w, r)
 	}
 
 	t, err := template.ParseFiles("./static/templates/uploadClip.html")
@@ -188,9 +233,10 @@ func (s *APIServer) handleCreateClip(w http.ResponseWriter, r *http.Request) err
 	}
 
 	createClipReq.PlaybackId = asset.Data.PlaybackIds[0].Id
+	createClipReq.AssetId = asset.Data.Id
 
-	// Step 4:
-	clip := NewClip(createClipReq.PlaybackId, createClipReq.UploadedBy, createClipReq.Title, createClipReq.Description, createClipReq.Game, createClipReq.Tags, createClipReq.Players)
+	// Step 4: Enter clip info into database
+	clip := NewClip(createClipReq.PlaybackId, createClipReq.UploadedBy, createClipReq.Title, createClipReq.Description, createClipReq.Game, createClipReq.Tags, createClipReq.Players, createClipReq.AssetId)
 	if err := s.store.CreateClip(clip); err != nil {
 		return err
 	}
