@@ -5,22 +5,37 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
+	lstv "github.com/majesticbeast/lostsonstv/types"
 )
 
-type muxApiAuth struct {
-	Id    string
-	Token string
+type profile struct {
+	Port    string
+	BaseUrl string
+}
+
+var localhost = profile{
+	Port:    ":8083",
+	BaseUrl: "http://localhost",
+}
+
+var remote = profile{
+	Port:    ":80",
+	BaseUrl: "http://thelostsons.net",
 }
 
 func main() {
 	godotenv.Load()
 
+	activeProfile := localhost
+
 	dbConnStr := os.Getenv("DB_CONN_STR")
 
-	muxApiAuth := muxApiAuth{
+	muxApiAuth := lstv.MuxApiAuth{
 		Id:    os.Getenv("MUX_TOKEN_ID"),
 		Token: os.Getenv("MUX_TOKEN_SECRET"),
 	}
+
+	discordClient := NewDiscordClient(os.Getenv("DISCORD_CLIENT_ID"), os.Getenv("DISCORD_CLIENT_SECRET"), activeProfile.BaseUrl+"/redirect")
 
 	store, err := NewPostgresStore(dbConnStr)
 	if err != nil {
@@ -31,6 +46,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	server := NewAPIServer(":8083", store, muxApiAuth)
+	server := NewAPIServer(activeProfile.Port, store, muxApiAuth, discordClient)
 	server.Run()
 }

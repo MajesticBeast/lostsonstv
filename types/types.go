@@ -1,4 +1,4 @@
-package main
+package types
 
 import (
 	"time"
@@ -48,4 +48,13 @@ func NewClip(playbackId, uploadedBy, title, description, game, tags, players, as
 		DateUploaded: time.Now(),
 		AssetId:      assetId,
 	}
+}
+
+type TemplateData struct {
+	Username string
+}
+
+type MuxApiAuth struct {
+	Id    string
+	Token string
 }

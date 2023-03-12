@@ -5,13 +5,14 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	lstv "github.com/majesticbeast/lostsonstv/types"
 )
 
 type Storage interface {
-	CreateClip(*Clip) error
+	CreateClip(*lstv.Clip) error
 	DeleteClip(string) error
-	GetClipByPlaybackId(string) (*Clip, error)
-	GetAllClips() ([]*Clip, error)
+	GetClipByPlaybackId(string) (*lstv.Clip, error)
+	GetAllClips() ([]*lstv.Clip, error)
 }
 
 type PostgresStore struct {
@@ -78,7 +79,7 @@ func (s *PostgresStore) createUsersTable() error {
 	return err
 }
 
-func (s *PostgresStore) CreateClip(clip *Clip) error {
+func (s *PostgresStore) CreateClip(clip *lstv.Clip) error {
 
 	query := `INSERT INTO clips VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
 
@@ -113,10 +114,10 @@ func (s *PostgresStore) DeleteClip(playbackId string) error {
 	return nil
 }
 
-func (s *PostgresStore) GetClipByPlaybackId(playbackId string) (*Clip, error) {
+func (s *PostgresStore) GetClipByPlaybackId(playbackId string) (*lstv.Clip, error) {
 	query := "SELECT * FROM clips WHERE playback_id = $1"
 
-	clip := &Clip{}
+	clip := &lstv.Clip{}
 	err := s.db.QueryRow(context.Background(), query, playbackId).Scan(&clip.PlaybackId, &clip.UploadedBy, &clip.Title, &clip.Description, &clip.Game, &clip.Tags, &clip.Players, &clip.DateUploaded, &clip.AssetId)
 	if err != nil {
 		return nil, fmt.Errorf("video with id `%s` does not exist.", playbackId)
@@ -125,13 +126,13 @@ func (s *PostgresStore) GetClipByPlaybackId(playbackId string) (*Clip, error) {
 	return clip, nil
 }
 
-func (s *PostgresStore) GetAllClips() ([]*Clip, error) {
+func (s *PostgresStore) GetAllClips() ([]*lstv.Clip, error) {
 	query := "SELECT * FROM clips"
 
-	clips := []*Clip{}
+	clips := []*lstv.Clip{}
 	rows, _ := s.db.Query(context.Background(), query)
 	for rows.Next() {
-		clip := new(Clip)
+		clip := new(lstv.Clip)
 		if err := rows.Scan(&clip.PlaybackId, &clip.UploadedBy, &clip.Title, &clip.Description, &clip.Game, &clip.Tags, &clip.Players, &clip.DateUploaded, &clip.AssetId); err != nil {
 			return nil, err
 		}
